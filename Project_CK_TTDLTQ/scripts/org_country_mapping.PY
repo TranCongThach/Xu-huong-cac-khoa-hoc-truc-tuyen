@@ -1,10 +1,4 @@
 # -*- coding: utf-8 -*-
-"""
-Bảng Dimension: Organization -> Country
-Gán thủ công cho top 150 Organization (phủ 81.7% bảng Fact).
-Những dòng đánh dấu 'UNKNOWN' là các platform/tổ chức đào tạo không gắn với
-1 quốc gia cụ thể -> Terry/nhóm nên tự kiểm tra lại trên Coursera trước khi nộp.
-"""
 
 ORG_COUNTRY_MAP = {
     "Google": "United States",
@@ -306,8 +300,6 @@ ORG_COUNTRY_MAP = {
     "Universidad de los Andes": "Colombia",
     "Universidad Peruana de Ciencias Aplicadas": "Peru",
     "Universidad de Palermo": "Argentina",
-
-    # --- Bổ sung 12 tổ chức còn thiếu (399 dòng) ---
     "Coursera Instructor Network": "United States",   # Mạng giảng viên nội bộ Coursera (US)
     "LearnQuest": "United States",                    # Công ty đào tạo IT, trụ sở Massachusetts
     "SkillUp EdTech": "India",                        # Startup EdTech, trụ sở Bangalore
