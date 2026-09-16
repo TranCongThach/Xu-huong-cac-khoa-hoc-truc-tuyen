@@ -62,7 +62,7 @@ python scripts/join_internet.py
 
 | File | Mô tả |
 |------|-------|
-| `Data/processed/fact_courses_FINAL_v2.csv` | ✅ Bảng Fact hoàn chỉnh (6640 dòng, 36 cột) |
+| `Data/processed/fact_courses_FINAL_v2.csv` | Bảng Fact hoàn chỉnh (6640 dòng, 36 cột) |
 | `Data/processed/dim_organization_country.csv` | Bảng Dimension: Tổ chức → Quốc gia |
 | `Data/processed/dim_internet_usage.csv` | Bảng Dimension: Quốc gia → Internet Usage |
 
