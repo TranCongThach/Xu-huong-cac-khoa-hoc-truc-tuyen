@@ -75,7 +75,7 @@ python scripts/join_internet.py
 
 ## TODO (các bước tiếp theo)
 
-- [ ] EDA (Exploratory Data Analysis)
+- [x] EDA (Exploratory Data Analysis) - Chạy `python scripts/eda.py` để xem biểu đồ trong `outputs/eda/`
 - [ ] Phân tích Insight
 - [ ] Mô hình dự báo
 - [ ] Dashboard / Visualization

@@ -3,6 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 import os
+import ast
 
 sns.set_theme(style="whitegrid", palette="muted")
 plt.rcParams['font.family'] = 'sans-serif'
@@ -10,100 +11,187 @@ plt.rcParams['font.sans-serif'] = ['Arial', 'Tahoma', 'DejaVu Sans']
 
 df = pd.read_csv("../Data/processed/fact_courses_FINAL_v2.csv")
 
-# 1. Phân phối dữ liệu số
-fig1, axes1 = plt.subplots(2, 2, figsize=(16, 12))
-fig1.suptitle('Phân Phối Các Biến Số Chính', fontsize=18, fontweight='bold', y=0.98)
+# Chuyển đổi các placeholder thành NaN
+placeholders = ['[]', "['']", 'not found', 'Not Found', 'Organization not found', 
+                'Enrollment number not found', 'Rating not found', 'None', 'nan']
+df.replace(placeholders, np.nan, inplace=True)
 
-sns.histplot(df['enrolled_num'].dropna(), bins=50, kde=True, ax=axes1[0, 0], color='skyblue', log_scale=True)
-axes1[0, 0].set_title('Phân phối Số lượng Học viên (Log Scale)')
-axes1[0, 0].set_xlabel('Số học viên đã đăng ký')
-axes1[0, 0].set_ylabel('Tần suất')
+for col in ['Instructor', 'Organization', 'enrolled', 'rating']:
+    if col in df.columns:
+        df[col] = df[col].apply(lambda x: np.nan if pd.notna(x) and 'not found' in str(x).lower() else x)
 
-sns.histplot(df['rating_num'].dropna(), bins=20, kde=True, ax=axes1[0, 1], color='salmon')
-axes1[0, 1].set_title('Phân phối Điểm Đánh Giá (Rating)')
-axes1[0, 1].set_xlabel('Điểm đánh giá (1-5)')
-axes1[0, 1].set_ylabel('Tần suất')
+def clean_skills(val):
+    if pd.isna(val): return np.nan
+    val = str(val).strip()
+    if val in ["[]", "['']", "['not found']"]: return np.nan
+    return val
 
-sns.histplot(df[df['hours_to_complete'] < 100]['hours_to_complete'].dropna(), bins=30, kde=True, ax=axes1[1, 0], color='lightgreen')
-axes1[1, 0].set_title('Phân phối Thời Gian Hoàn Thành (< 100 giờ)')
-axes1[1, 0].set_xlabel('Số giờ')
-axes1[1, 0].set_ylabel('Tần suất')
+df['skills_combined'] = df['skills_combined'].apply(clean_skills)
+df.loc[(df['rating_num'].isna()) | (df['enrolled_num'].isna()), 'popularity_score'] = np.nan
 
-sns.histplot(df['popularity_score'].dropna(), bins=30, kde=True, ax=axes1[1, 1], color='orchid')
-axes1[1, 1].set_title('Phân phối Điểm Phổ Biến (Popularity Score)')
-axes1[1, 1].set_xlabel('Điểm phổ biến (0-1)')
-axes1[1, 1].set_ylabel('Tần suất')
+out_dir = "../outputs/eda"
+os.makedirs(out_dir, exist_ok=True)
 
-fig1.tight_layout()
+dq_df = pd.DataFrame({
+    'Column': df.columns,
+    'Missing_Count': df.isna().sum(),
+    'Missing_Percentage': (df.isna().sum() / len(df)) * 100,
+    'Unique_Count': df.nunique(),
+    'Data_Type': df.dtypes
+}).reset_index(drop=True)
+dq_df.to_csv(f"{out_dir}/01_data_quality.csv", index=False)
 
-# 2. Phân phối biến phân loại
-fig2, axes2 = plt.subplots(1, 2, figsize=(16, 6))
-fig2.suptitle('Phân Phối Dữ Liệu Phân Loại', fontsize=18, fontweight='bold')
+desc_df = df.describe(include=[np.number]).T
+desc_df.to_csv(f"{out_dir}/02_descriptive_statistics.csv", index=True)
 
-sns.countplot(data=df, y='level_clean', order=df['level_clean'].value_counts().index, ax=axes2[0], hue='level_clean', palette='pastel', legend=False)
-axes2[0].set_title('Số lượng khóa học theo Độ Khó')
-axes2[0].set_xlabel('Số lượng khóa học')
-axes2[0].set_ylabel('Cấp độ')
+# Phân phối các biến số chính
+fig, axes = plt.subplots(2, 2, figsize=(16, 12))
+fig.suptitle('Phân phối các biến số chính', fontsize=12, fontweight='bold', y=0.98)
 
+sns.histplot(df['enrolled_num'].dropna(), bins=50,
+             kde=True, ax=axes[0, 0], color='blue', log_scale=True)
+axes[0, 0].set_title('Phân phối số lượng học viên')
+axes[0, 0].set_xlabel('Số học viên đã đăng ký')
+axes[0, 0].set_ylabel('Tần suất')
+
+sns.histplot(df['rating_num'].dropna(), bins=20,
+             kde=True, ax=axes[0, 1], color='salmon')
+axes[0, 1].set_title('Phân phối điểm đánh giá')
+axes[0, 1].set_xlabel('Điểm đánh giá (1 - 5)')
+axes[0, 1].set_ylabel('Tần suất')
+
+sns.histplot(df[df['hours_to_complete'] < 100]
+             ['hours_to_complete'].dropna(), bins=30,
+             kde=True, ax=axes[1, 0], color='green')
+axes[1, 0].set_title('Phân phối thời gian hoàn thành (< 100 giờ)')
+axes[1, 0].set_xlabel('Số giờ')
+axes[1, 0].set_ylabel('Tần suất')
+
+sns.histplot(df['popularity_score'].dropna(), bins=30, kde=True, ax=axes[1, 1], color='orchid')
+axes[1, 1].set_title('Phân phối điểm phổ biến')
+axes[1, 1].set_xlabel('Điểm phổ biến (0 - 1)')
+axes[1, 1].set_ylabel('Tần suất')
+
+plt.tight_layout()
+plt.savefig(f"{out_dir}/03_numeric_distributions.png", dpi=300)
+plt.close()
+
+# Số lượng khóa học theo độ khó
+plt.figure(figsize=(10, 6))
+sns.countplot(data=df, y='level_clean', order=df['level_clean'].value_counts().index,
+              hue='level_clean', palette='pastel', legend=False)
+plt.title('Số lượng khóa học theo độ khó', fontsize=12, fontweight='bold')
+plt.xlabel('Số lượng khóa học')
+plt.ylabel('Cấp độ')
+plt.tight_layout()
+plt.savefig(f"{out_dir}/04_level_distribution.png", dpi=300)
+plt.close()
+
+# Số lượng khóa học
+plt.figure(figsize=(12, 6))
 top_subjects = df['Subject'].value_counts().head(10)
-sns.barplot(x=top_subjects.values, y=top_subjects.index, ax=axes2[1], hue=top_subjects.index, palette='pastel', legend=False)
-axes2[1].set_title('Top 10 Chủ Đề (Subject) Phổ Biến Nhất')
-axes2[1].set_xlabel('Số lượng khóa học')
-axes2[1].set_ylabel('')
+sns.barplot(x=top_subjects.values, y=top_subjects.index,
+            hue=top_subjects.index, palette='pastel', legend=False)
+plt.title('Phân bố các chủ đề', fontsize=12, fontweight='bold')
+plt.xlabel('Số lượng khóa học')
+plt.ylabel('')
+plt.tight_layout()
+plt.savefig(f"{out_dir}/05_subject_distribution.png", dpi=300)
+plt.close()
 
-fig2.tight_layout()
-
-# 3. Rating theo độ khó
-fig3 = plt.figure(figsize=(10, 6))
+# Mức độ khó của các khóa học
+plt.figure(figsize=(10, 6))
 sns.boxplot(data=df, x='level_clean', y='rating_num', hue='level_clean', palette='Set2', 
             order=['Beginner', 'Intermediate', 'Advanced', 'Not specified'], legend=False)
-plt.title('Phân Bố Điểm Đánh Giá Theo Mức Độ Khó', fontsize=16, fontweight='bold')
-plt.xlabel('Cấp độ (Level)')
+plt.title('Phân bố điểm đánh giá theo mức độ khó', fontsize=12, fontweight='bold')
+plt.xlabel('Cấp độ')
 plt.ylabel('Điểm đánh giá')
-fig3.tight_layout()
+plt.tight_layout()
+plt.savefig(f"{out_dir}/06_rating_by_level.png", dpi=300)
+plt.close()
 
-# 4. Heatmap
-cols_for_corr = ['enrolled_num', 'rating_num', 'num_reviews', 'hours_to_complete', 
-                 'duration_weeks', 'popularity_score', 'review_to_enrollment_ratio']
-corr_matrix = df[cols_for_corr].corr()
+# Heatmap
+fig, axes = plt.subplots(1, 2, figsize=(18, 8))
+cols_raw = ['enrolled_num', 'rating_num', 'num_reviews', 'hours_to_complete']
+cols_derived = ['popularity_score', 'review_to_enrollment_ratio']
 
-fig4 = plt.figure(figsize=(10, 8))
-sns.heatmap(corr_matrix, annot=True, cmap='coolwarm', fmt=".2f", linewidths=.5,
-            xticklabels=['Học viên', 'Rating', 'Số Reviews', 'Số giờ', 'Số tuần', 'Độ phổ biến', 'Tỉ lệ Rev/Enr'],
-            yticklabels=['Học viên', 'Rating', 'Số Reviews', 'Số giờ', 'Số tuần', 'Độ phổ biến', 'Tỉ lệ Rev/Enr'])
-plt.title('Ma Trận Tương Quan Giữa Các Biến Số Chính', fontsize=16, fontweight='bold', pad=20)
-fig4.tight_layout()
+sns.heatmap(df[cols_raw].corr(method='spearman'), ax=axes[0], annot=True, cmap='coolwarm', fmt=".2f",
+            xticklabels=['Học viên', 'Rating', 'Số Reviews', 'Số giờ'],
+            yticklabels=['Học viên', 'Rating', 'Số Reviews', 'Số giờ'])
+axes[0].set_title('Tương quan Spearman (Biến Gốc)', fontsize=12, fontweight='bold', pad=15)
 
-# 5. Top tổ chức & Quốc gia
-fig5, axes5 = plt.subplots(1, 2, figsize=(18, 7))
-fig5.suptitle('Phân Tích Theo Tổ Chức Và Quốc Gia', fontsize=18, fontweight='bold')
+sns.heatmap(df[cols_derived].corr(method='spearman'), ax=axes[1], annot=True, cmap='coolwarm', fmt=".2f",
+            xticklabels=['Độ phổ biến', 'Tỉ lệ Rev/Enr'],
+            yticklabels=['Độ phổ biến', 'Tỉ lệ Rev/Enr'])
+axes[1].set_title('Tương quan Spearman (Biến Phái Sinh)', fontsize=12, fontweight='bold', pad=15)
 
+plt.tight_layout()
+plt.savefig(f"{out_dir}/07_correlation_spearman.png", dpi=300)
+plt.close()
+
+# Top 10 tổ chức có nhiều khóa học nhất
+plt.figure(figsize=(12, 6))
 top_orgs = df['Organization'].value_counts().head(10)
-sns.barplot(x=top_orgs.values, y=top_orgs.index, ax=axes5[0], hue=top_orgs.index, palette='viridis', legend=False)
-axes5[0].set_title('Top 10 Tổ Chức Có Nhiều Khóa Học Nhất')
-axes5[0].set_xlabel('Số lượng khóa học')
-axes5[0].set_ylabel('')
+sns.barplot(x=top_orgs.values, y=top_orgs.index,
+            hue=top_orgs.index, palette='viridis', legend=False)
+plt.title('Top 10 tổ chức có nhiều khóa học nhất', fontsize=12, fontweight='bold')
+plt.xlabel('Số lượng khóa học')
+plt.ylabel('')
+plt.tight_layout()
+plt.savefig(f"{out_dir}/08_top_organizations.png", dpi=300)
+plt.close()
 
+# Top 10 QG
+plt.figure(figsize=(12, 6))
 top_countries = df['Country'].value_counts().head(10)
-sns.barplot(x=top_countries.values, y=top_countries.index, ax=axes5[1], hue=top_countries.index, palette='magma', legend=False)
-axes5[1].set_title('Top 10 Quốc Gia Cung Cấp Khóa Học')
-axes5[1].set_xlabel('Số lượng khóa học')
-axes5[1].set_ylabel('')
+sns.barplot(x=top_countries.values, y=top_countries.index,
+            hue=top_countries.index, palette='magma', legend=False)
+plt.title('Top 10 Quốc Gia trụ sở tổ chức', fontsize=12, fontweight='bold')
+plt.xlabel('Số lượng khóa học')
+plt.ylabel('')
+plt.tight_layout()
+plt.savefig(f"{out_dir}/09_organization_hq_countries.png", dpi=300)
+plt.close()
 
-fig5.tight_layout()
-
-# 6. Tỷ lệ các missing value
+# Tỷ lệ Missing value
 missing_pct = (df.isnull().sum() / len(df) * 100).sort_values(ascending=False)
 missing_pct = missing_pct[missing_pct > 0] 
 
-fig6 = plt.figure(figsize=(12, 8))
-sns.barplot(x=missing_pct.values, y=missing_pct.index, hue=missing_pct.index, palette='Reds_r', legend=False)
-plt.title('Tỉ Lệ Missing Value Theo Từng Cột (%)', fontsize=16, fontweight='bold')
+plt.figure(figsize=(12, 10))
+sns.barplot(x=missing_pct.values, y=missing_pct.index,
+            hue=missing_pct.index, palette='Reds_r', legend=False)
+plt.title('Tỷ lệ Missing value theo từng cột (%)', fontsize=12, fontweight='bold')
 plt.xlabel('Phần trăm thiếu (%)')
 plt.ylabel('Tên cột')
 for i, v in enumerate(missing_pct.values):
     plt.text(v + 0.5, i, f"{v:.1f}%", va='center')
 plt.xlim(0, 105)
-fig6.tight_layout()
+plt.tight_layout()
+plt.savefig(f"{out_dir}/10_missing_values.png", dpi=300)
+plt.close()
 
-plt.show()
+# Top các skill phổ biến nhất
+skills_list = []
+for item in df['skills_combined'].dropna():
+    try:
+        if item.startswith('['):
+            skills = ast.literal_eval(item)
+            if isinstance(skills, list):
+                skills_list.extend(skills)
+        else:
+            skills_list.append(item)
+    except:
+        pass
+
+skills_series = pd.Series(skills_list)
+top_skills = skills_series.value_counts().head(15)
+
+plt.figure(figsize=(12, 8))
+sns.barplot(x=top_skills.values, y=top_skills.index,
+            hue=top_skills.index, palette='mako', legend=False)
+plt.title('Top 15 skill phổ biến nhất', fontsize=12, fontweight='bold')
+plt.xlabel('Tần suất xuất hiện')
+plt.ylabel('')
+plt.tight_layout()
+plt.savefig(f"{out_dir}/11_top_skills.png", dpi=300)
+plt.close()
