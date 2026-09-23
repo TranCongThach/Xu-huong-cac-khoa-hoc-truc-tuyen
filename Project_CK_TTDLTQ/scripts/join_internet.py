@@ -1,6 +1,7 @@
 import pandas as pd
+
 net = pd.read_csv(
-    r"D:\Project_CK_TTDLTQ\Data\raw\internet_usage.csv",
+    "./Data/raw/internet_usage.csv",
     na_values=["..", "N/A", "-", ""],
     keep_default_na=True,
 )
@@ -20,8 +21,8 @@ net["internet_usage_year"] = net.apply(get_latest_year, axis=1)
 net_clean = net[["Country Name", "Country Code", "internet_usage_pct", "internet_usage_year"]]
 n_missing_all = net_clean["internet_usage_pct"].isna().sum()
 print(f"Quốc gia hoàn toàn không có dữ liệu (mọi năm đều thiếu): {n_missing_all}/{len(net_clean)}")
-net_clean.to_csv("data/processed/dim_internet_usage.csv", index=False)
-print("Đã lưu bảng Dimension: data/processed/dim_internet_usage.csv")
+net_clean.to_csv("./Data/processed/dim_internet_usage.csv", index=False)
+print("Đã lưu bảng Dimension: ./Data/processed/dim_internet_usage.csv")
 
 COUNTRY_NAME_FIX = {
     "South Korea": "Korea, Rep.",
@@ -33,7 +34,7 @@ MANUAL_INTERNET = {
     "Taiwan": (91.0, 2022),  
 }
 
-fact = pd.read_csv(r"D:\Project_CK_TTDLTQ\Data\processed\fact_courses_final.csv")
+fact = pd.read_csv("./Data/processed/fact_courses_final.csv")
 n_before = len(fact)
 fact["_country_for_join"] = fact["Country"].replace(COUNTRY_NAME_FIX)
 merged = fact.merge(
@@ -66,6 +67,6 @@ total = len(merged)
 has_internet = merged["internet_usage_pct"].notna().sum()
 print(f"\nCoverage internet_usage_pct: {has_internet}/{total} ({has_internet/total*100:.1f}%)")
 print(f"  - Còn thiếu: {total - has_internet} dòng (do Country = NaN, không thể map)")
-merged.to_csv("data/processed/fact_courses_FINAL_v2.csv", index=False)
+merged.to_csv("./Data/processed/fact_courses_FINAL_v2.csv", index=False)
 print(f"\nHoàn tất. Số dòng: {len(merged)} | Số cột: {len(merged.columns)}")
-print(f"Đã lưu: data/processed/fact_courses_FINAL_v2.csv")
+print(f"Đã lưu: ./Data/processed/fact_courses_FINAL_v2.csv")

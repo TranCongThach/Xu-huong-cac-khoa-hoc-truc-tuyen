@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 import re
 
-df = pd.read_csv(r"D:\Project_CK_TTDLTQ\Data\processed\fact_courses_with_country.csv")
+df = pd.read_csv("./Data/processed/fact_courses_with_country.csv")
 n_before = len(df)
 
 def parse_schedule(text):
@@ -39,9 +39,9 @@ df["skills_combined"] = df["Skills"].fillna(df["gained_skills_sup1"])
 df["courses_per_organization"] = df.groupby("Organization")["title"].transform("count")
 df["courses_per_country"] = df.groupby("Country")["title"].transform("count")
 assert len(df) == n_before, "LỖI: số dòng bị thay đổi, kiểm tra lại các bước merge/groupby!"
-df.to_csv("data/processed/fact_courses_final.csv", index=False)
+df.to_csv("./Data/processed/fact_courses_final.csv", index=False)
 print(f"Hoàn tất. Số dòng: {len(df)} | Số cột: {len(df.columns)}")
-print(f"Đã lưu: data/processed/fact_courses_final.csv")
+print(f"Đã lưu: ./Data/processed/fact_courses_final.csv")
 print()
 print("Thống kê nhanh các trường mới:")
 print(df[["hours_to_complete", "duration_weeks", "review_to_enrollment_ratio", "popularity_score"]].describe())
