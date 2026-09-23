@@ -3,11 +3,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 import os
-#1
+
 sns.set_theme(style="whitegrid", palette="muted")
 plt.rcParams['font.family'] = 'sans-serif'
 plt.rcParams['font.sans-serif'] = ['Arial', 'Tahoma', 'DejaVu Sans']
-
 
 df = pd.read_csv("../Data/processed/fact_courses_FINAL_v2.csv")
 
